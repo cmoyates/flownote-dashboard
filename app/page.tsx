@@ -1,41 +1,39 @@
 "use client";
 
+import DatabaseCombobox from "@/components/DatabaseCombobox";
 import { Button } from "@/components/ui/button";
+import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import type { NotionDatabasesResponse } from "@/types/notion";
+import { useEffect } from "react";
 
 export default function Home() {
-  const handleClick = async () => {
-    console.log("Fetching Notion databases...");
+  const { setAllDatabases, activeDatabaseID } = useDatabaseTableStore();
 
-    try {
-      const response = await fetch("/api/notion/databases");
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error:", errorData);
-        return;
+  useEffect(() => {
+    const fetchDatabases = async () => {
+      try {
+        const response = await fetch("/api/notion/databases");
+        if (!response.ok) {
+          throw new Error("Failed to fetch databases");
+        }
+        const data: NotionDatabasesResponse = await response.json();
+        setAllDatabases(data.databases);
+      } catch (error) {
+        console.error("Error fetching databases:", error);
       }
+    };
 
-      const data: NotionDatabasesResponse = await response.json();
+    fetchDatabases();
+  }, []);
 
-      console.log("Databases found:", data.databases.length);
-
-      // Log all database IDs
-      const databaseIds = data.databases.map((db) => db.id);
-      console.log("Database IDs:", databaseIds);
-
-      // Also log database titles for better context
-      data.databases.forEach((db) => {
-        console.log(`Database: "${db.title}" (ID: ${db.id})`);
-      });
-    } catch (error) {
-      console.error("Failed to fetch databases:", error);
-    }
+  const handleClick = () => {
+    console.log("Active Database ID:", activeDatabaseID);
   };
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <Button onClick={handleClick}>Click me</Button>
+      <DatabaseCombobox />
     </div>
   );
 }
