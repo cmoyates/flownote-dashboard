@@ -6,7 +6,8 @@ import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import type { NotionDatabasesResponse } from "@/types/notion";
 import { useEffect } from "react";
 
-export default function Home() {
+// Extracted data fetching component following "move state down" principle
+function DatabaseLoader() {
   const setAllDatabases = useDatabaseTableStore().setAllDatabases;
 
   useEffect(() => {
@@ -26,8 +27,14 @@ export default function Home() {
     fetchDatabases();
   }, [setAllDatabases]);
 
+  return null; // This component only handles data fetching
+}
+
+// Main layout component with stable structure
+export default function Home() {
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] flex-col items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+      <DatabaseLoader />
       <div className="flex flex-row items-center gap-4 justify-end w-full">
         <DatabaseCombobox />
       </div>

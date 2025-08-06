@@ -1,4 +1,4 @@
-import { MouseEvent } from "react";
+import { MouseEvent, memo, useCallback, useMemo } from "react";
 import { flexRender, type Row } from "@tanstack/react-table";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { NotionPage } from "@/types/notion";
@@ -13,7 +13,7 @@ interface DatabaseTableRowProps {
   onMouseEnter?: (rowIndex: number) => void;
 }
 
-const DatabaseTableRow = ({
+const DatabaseTableRow = memo(({
   row,
   rowIndex,
   isSelected,
@@ -22,28 +22,32 @@ const DatabaseTableRow = ({
   onMouseDown,
   onMouseEnter,
 }: DatabaseTableRowProps) => {
-  const handleMouseDown = (event: React.MouseEvent) => {
+  const handleMouseDown = useCallback((event: React.MouseEvent) => {
     onMouseDown?.(rowIndex, event);
-  };
+  }, [onMouseDown, rowIndex]);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onMouseEnter?.(rowIndex);
-  };
+  }, [onMouseEnter, rowIndex]);
 
-  const visibleCells = row.getVisibleCells();
+  const visibleCells = useMemo(() => row.getVisibleCells(), [row]);
 
-  // Generate className
-  let rowClassName = "cursor-pointer";
+  // Memoized className generation
+  const rowClassName = useMemo(() => {
+    let className = "cursor-pointer";
 
-  if (isSelected) {
-    rowClassName += " bg-blue-500/20 hover:bg-blue-500/30";
-  } else {
-    rowClassName += " hover:bg-muted/30";
-  }
+    if (isSelected) {
+      className += " bg-blue-500/20 hover:bg-blue-500/30";
+    } else {
+      className += " hover:bg-muted/30";
+    }
 
-  if (isDragging && isInDragRange) {
-    rowClassName += " bg-primary/20 border-primary/50";
-  }
+    if (isDragging && isInDragRange) {
+      className += " bg-primary/20 border-primary/50";
+    }
+
+    return className;
+  }, [isSelected, isDragging, isInDragRange]);
 
   return (
     <TableRow
@@ -58,6 +62,8 @@ const DatabaseTableRow = ({
       ))}
     </TableRow>
   );
-};
+});
+
+DatabaseTableRow.displayName = 'DatabaseTableRow';
 
 export default DatabaseTableRow;

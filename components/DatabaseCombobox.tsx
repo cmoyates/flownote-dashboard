@@ -17,16 +17,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 const DatabaseCombobox = () => {
   const [open, setOpen] = useState(false);
   const { allDatabases, activeDatabaseID, setActiveDatabaseID } =
     useDatabaseTableStore();
 
-  const activeDatabase = allDatabases.find(
-    (database) => database.id === activeDatabaseID
+  const activeDatabase = useMemo(() => 
+    allDatabases.find((database) => database.id === activeDatabaseID),
+    [allDatabases, activeDatabaseID]
   );
+
+  const handleSelect = useCallback((databaseId: string) => {
+    setActiveDatabaseID(databaseId === activeDatabaseID ? "" : databaseId);
+    setOpen(false);
+  }, [activeDatabaseID, setActiveDatabaseID]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -51,12 +57,7 @@ const DatabaseCombobox = () => {
                 <CommandItem
                   key={database.id}
                   value={database.title}
-                  onSelect={() => {
-                    setActiveDatabaseID(
-                      database.id === activeDatabaseID ? "" : database.id
-                    );
-                    setOpen(false);
-                  }}
+                  onSelect={() => handleSelect(database.id)}
                 >
                   <CheckIcon
                     className={cn(

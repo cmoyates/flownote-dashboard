@@ -1,4 +1,4 @@
-import { MouseEvent } from "react";
+import { MouseEvent, memo } from "react";
 import { type Table } from "@tanstack/react-table";
 import { NotionPage } from "@/types/notion";
 import DatabaseTableRow from "./DatabaseTableRow";
@@ -12,7 +12,7 @@ interface DatabaseTableBodyRowsProps {
   onMouseEnter: (rowIndex: number) => void;
 }
 
-const DatabaseTableBodyRows = ({
+const DatabaseTableBodyRows = memo(({
   table,
   isDragging,
   dragRange,
@@ -46,6 +46,8 @@ const DatabaseTableBodyRows = ({
       ))}
     </>
   );
-};
+});
+
+DatabaseTableBodyRows.displayName = 'DatabaseTableBodyRows';
 
 export default DatabaseTableBodyRows;

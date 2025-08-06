@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, memo } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -22,18 +22,20 @@ import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { NotionPage, NotionPagesResponse } from "@/types/notion";
 import DatabaseTableBodyRows from "./DatabaseTableBodyRows";
 
-// Cell components
-const TitleCell = ({ value }: { value: string | null }) => (
+// Memoized cell components
+const TitleCell = memo(({ value }: { value: string | null }) => (
   <div className="font-medium">{value || "Untitled"}</div>
-);
+));
+TitleCell.displayName = 'TitleCell';
 
-const DateCell = ({ value }: { value: string }) => (
+const DateCell = memo(({ value }: { value: string }) => (
   <div className="text-sm text-muted-foreground">
     {new Date(value).toLocaleDateString()}
   </div>
-);
+));
+DateCell.displayName = 'DateCell';
 
-const ActionCell = ({ url }: { url: string }) => (
+const ActionCell = memo(({ url }: { url: string }) => (
   <a
     href={url}
     target="_blank"
@@ -42,7 +44,8 @@ const ActionCell = ({ url }: { url: string }) => (
   >
     Open in Notion
   </a>
-);
+));
+ActionCell.displayName = 'ActionCell';
 
 // Static state components
 const LoadingState = () => (
@@ -129,8 +132,8 @@ const DatabaseTable = () => {
     fetchPages();
   }, [activeDatabaseID, setPages, setIsLoading, setError, setRowSelection]);
 
-  // Define columns
-  const columns: ColumnDef<NotionPage>[] = [
+  // Memoized columns definition (stable reference)
+  const columns = useMemo<ColumnDef<NotionPage>[]>(() => [
     {
       id: "select",
       header: ({ table }) => (
@@ -174,10 +177,10 @@ const DatabaseTable = () => {
       cell: (info) => <ActionCell url={info.getValue() as string} />,
       enableSorting: false,
     },
-  ];
+  ], []);
 
-  // Create table instance
-  const table = useReactTable({
+  // Memoized table options for stable reference
+  const tableOptions = useMemo(() => ({
     data: pages,
     columns,
     getCoreRowModel: getCoreRowModel(),
@@ -190,20 +193,23 @@ const DatabaseTable = () => {
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     enableSorting: true,
-  });
+  }), [pages, columns, sorting, rowSelection, setRowSelection]);
 
-  // Selection text
-  const selectionText = (() => {
+  // Create table instance
+  const table = useReactTable(tableOptions);
+
+  // Memoized selection text
+  const selectionText = useMemo(() => {
     if (!table) return "0 of 0 row(s) selected.";
 
     const selectedRows = table.getFilteredSelectedRowModel().rows;
     const totalRows = table.getFilteredRowModel().rows;
 
     return `${selectedRows.length} of ${totalRows.length} row(s) selected.`;
-  })();
+  }, [table]);
 
-  // Drag selection handlers
-  const handleMouseDown = (rowIndex: number, event: React.MouseEvent) => {
+  // Memoized drag selection handlers for stable references
+  const handleMouseDown = useCallback((rowIndex: number, event: React.MouseEvent) => {
     const tableRows = table?.getRowModel().rows ?? [];
 
     // Prevent drag selection when clicking on checkboxes or links
@@ -232,16 +238,16 @@ const DatabaseTable = () => {
     // Prevent text selection during drag
     event.preventDefault();
     document.body.style.userSelect = "none";
-  };
+  }, [table, rowSelection]);
 
-  const handleMouseEnter = (rowIndex: number) => {
+  const handleMouseEnter = useCallback((rowIndex: number) => {
     if (!isMouseDown.current || dragStartIndex === null) return;
 
     setDragEndIndex(rowIndex);
-  };
+  }, [dragStartIndex]);
 
-  // Drag range calculations
-  const dragRange = (() => {
+  // Memoized drag range calculations
+  const dragRange = useMemo(() => {
     if (!isDragging || dragStartIndex === null || dragEndIndex === null) {
       return null;
     }
@@ -249,7 +255,7 @@ const DatabaseTable = () => {
       start: Math.min(dragStartIndex, dragEndIndex),
       end: Math.max(dragStartIndex, dragEndIndex),
     };
-  })();
+  }, [isDragging, dragStartIndex, dragEndIndex]);
 
   // Global mouse up handler to handle mouse up outside the table
   useEffect(() => {

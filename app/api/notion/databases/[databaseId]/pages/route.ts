@@ -10,11 +10,12 @@ const notion = new Client({
   auth: process.env.NOTION_API_KEY,
 });
 
-interface RouteParams {
-  params: { databaseId: string };
+interface RouteContext {
+  params: Promise<{ databaseId: string }>;
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteContext) {
+  const params = await context.params;
   try {
     // Check if API key is configured
     if (!process.env.NOTION_API_KEY) {
