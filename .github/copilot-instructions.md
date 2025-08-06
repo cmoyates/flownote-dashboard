@@ -36,6 +36,7 @@ This is a **Next.js 15** AI chat application built for testing SpeechCatcher AI 
 - **clsx** for conditional class names
 - **notionhq/client** for Notion API integration
 - **tanstack/react-table** for table management
+- **sonner** for toast notifications
 
 ## Essential Conventions
 

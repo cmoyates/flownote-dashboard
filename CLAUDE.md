@@ -35,6 +35,7 @@ This is a **Next.js 15** application that provides a dashboard interface for bro
 - **Tables**: TanStack Table for data visualization with drag selection
 - **Animations**: Framer Motion with spring physics
 - **API**: Notion API integration via @notionhq/client
+- **Sonner**: Toast notifications
 
 ## Key Components Architecture
 
