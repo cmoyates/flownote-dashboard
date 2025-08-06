@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useMemo, useEffect, useState } from "react";
+import React, {
+  useMemo,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -36,6 +42,13 @@ const DatabaseTable = () => {
   } = useDatabaseTableStore();
 
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Drag selection state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
+  const [dragEndIndex, setDragEndIndex] = useState<number | null>(null);
+  const dragStartSelection = useRef<Record<string, boolean>>({});
+  const isMouseDown = useRef(false);
 
   // Fetch pages when active database changes
   useEffect(() => {
@@ -160,6 +173,121 @@ const DatabaseTable = () => {
     enableSorting: true,
   });
 
+  // Drag selection handlers
+  const handleMouseDown = useCallback(
+    (rowIndex: number, event: React.MouseEvent) => {
+      // Prevent drag selection when clicking on checkboxes or links
+      const target = event.target as HTMLElement;
+      if (target.closest('input[type="checkbox"]') || target.closest("a")) {
+        return;
+      }
+
+      // Handle Ctrl/Cmd + Click for individual toggle without drag
+      if (event.ctrlKey || event.metaKey) {
+        const row = table.getRowModel().rows[rowIndex];
+        if (row) {
+          row.toggleSelected();
+        }
+        return;
+      }
+
+      isMouseDown.current = true;
+      setIsDragging(true);
+      setDragStartIndex(rowIndex);
+      setDragEndIndex(rowIndex);
+
+      // Store the current selection state when starting drag
+      dragStartSelection.current = { ...rowSelection };
+
+      // Prevent text selection during drag
+      event.preventDefault();
+      document.body.style.userSelect = "none";
+    },
+    [rowSelection, table]
+  );
+
+  const handleMouseEnter = useCallback(
+    (rowIndex: number) => {
+      if (!isMouseDown.current || dragStartIndex === null) return;
+
+      setDragEndIndex(rowIndex);
+    },
+    [dragStartIndex]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (
+      !isMouseDown.current ||
+      dragStartIndex === null ||
+      dragEndIndex === null
+    ) {
+      isMouseDown.current = false;
+      setIsDragging(false);
+      return;
+    }
+
+    // Apply the drag selection
+    const start = Math.min(dragStartIndex, dragEndIndex);
+    const end = Math.max(dragStartIndex, dragEndIndex);
+
+    const newSelection = { ...dragStartSelection.current };
+
+    // Determine if we should select or deselect based on the first row in the range
+    const firstRowInRange = table.getRowModel().rows[start];
+    const shouldSelect = firstRowInRange
+      ? !dragStartSelection.current[firstRowInRange.index]
+      : true;
+
+    // Apply the same action (select or deselect) to all rows in the range
+    for (let i = start; i <= end; i++) {
+      const row = table.getRowModel().rows[i];
+      if (row) {
+        newSelection[row.index] = shouldSelect;
+      }
+    }
+
+    setRowSelection(newSelection);
+
+    // Reset drag state and restore text selection
+    isMouseDown.current = false;
+    setIsDragging(false);
+    setDragStartIndex(null);
+    setDragEndIndex(null);
+    dragStartSelection.current = {};
+    document.body.style.userSelect = "";
+  }, [dragStartIndex, dragEndIndex, setRowSelection, table]);
+
+  // Global mouse up handler to handle mouse up outside the table
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isMouseDown.current) {
+        handleMouseUp();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Cancel drag on Escape key
+      if (event.key === "Escape" && isDragging) {
+        isMouseDown.current = false;
+        setIsDragging(false);
+        setDragStartIndex(null);
+        setDragEndIndex(null);
+        dragStartSelection.current = {};
+        document.body.style.userSelect = "";
+      }
+    };
+
+    document.addEventListener("mouseup", handleGlobalMouseUp);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mouseup", handleGlobalMouseUp);
+      document.removeEventListener("keydown", handleKeyDown);
+      // Cleanup on unmount
+      document.body.style.userSelect = "";
+    };
+  }, [handleMouseUp, isDragging]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -209,47 +337,70 @@ const DatabaseTable = () => {
         </div>
       </div>
 
-      <Table>
-        <TableCaption>
-          Pages from the selected Notion database ({pages.length} total)
-        </TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  <div
-                    className={
-                      header.column.getCanSort()
-                        ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
-                        : ""
-                    }
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    {header.column.getCanSort() && (
-                      <span className="ml-1">
-                        {{
-                          asc: "↑",
-                          desc: "↓",
-                        }[header.column.getIsSorted() as string] ?? "↕"}
-                      </span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <DatabaseTableRow key={row.id} row={row} />
-          ))}
-        </TableBody>
-      </Table>
+      <div
+        className={`${
+          isDragging ? "select-none cursor-grabbing" : "cursor-auto"
+        }`}
+      >
+        <Table>
+          <TableCaption>
+            Pages from the selected Notion database ({pages.length} total)
+          </TableCaption>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    <div
+                      className={
+                        header.column.getCanSort()
+                          ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
+                          : ""
+                      }
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                      {header.column.getCanSort() && (
+                        <span className="ml-1">
+                          {{
+                            asc: "↑",
+                            desc: "↓",
+                          }[header.column.getIsSorted() as string] ?? "↕"}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row, index) => {
+              const isInDragRange =
+                isDragging &&
+                dragStartIndex !== null &&
+                dragEndIndex !== null &&
+                index >= Math.min(dragStartIndex, dragEndIndex) &&
+                index <= Math.max(dragStartIndex, dragEndIndex);
+
+              return (
+                <DatabaseTableRow
+                  key={row.id}
+                  row={row}
+                  rowIndex={index}
+                  isDragging={isDragging}
+                  isInDragRange={isInDragRange}
+                  onMouseDown={handleMouseDown}
+                  onMouseEnter={handleMouseEnter}
+                />
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
