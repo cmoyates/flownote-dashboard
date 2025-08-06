@@ -24,11 +24,35 @@ export interface NotionDatabase {
   public_url: string | null;
 }
 
+export interface NotionPage {
+  id: string;
+  title: string;
+  url: string;
+  created_time: string;
+  last_edited_time: string;
+  created_by: unknown;
+  last_edited_by: unknown;
+  cover: unknown;
+  icon: unknown;
+  parent: unknown;
+  archived: boolean;
+  in_trash: boolean;
+  properties: Record<string, unknown>;
+}
+
 export interface NotionDatabasesResponse {
   databases: NotionDatabase[];
   has_more: boolean;
   next_cursor: string | null;
   total_count: number;
+}
+
+export interface NotionPagesResponse {
+  pages: NotionPage[];
+  has_more: boolean;
+  next_cursor: string | null;
+  total_count: number;
+  database_id: string;
 }
 
 export interface NotionAPIError {
