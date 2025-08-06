@@ -1,8 +1,6 @@
 "use client";
 
-import * as React from "react";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +17,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
+import { useState } from "react";
 
 const DatabaseCombobox = () => {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const { allDatabases, activeDatabaseID, setActiveDatabaseID } =
     useDatabaseTableStore();
 

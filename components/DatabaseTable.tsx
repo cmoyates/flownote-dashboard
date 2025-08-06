@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useMemo,
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-} from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -27,6 +21,57 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { NotionPage, NotionPagesResponse } from "@/types/notion";
 import DatabaseTableBodyRows from "./DatabaseTableBodyRows";
+
+// Cell components
+const TitleCell = ({ value }: { value: string | null }) => (
+  <div className="font-medium">{value || "Untitled"}</div>
+);
+
+const DateCell = ({ value }: { value: string }) => (
+  <div className="text-sm text-muted-foreground">
+    {new Date(value).toLocaleDateString()}
+  </div>
+);
+
+const ActionCell = ({ url }: { url: string }) => (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-blue-600 hover:text-blue-800 text-sm underline"
+  >
+    Open in Notion
+  </a>
+);
+
+// Static state components
+const LoadingState = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-muted-foreground">Loading pages...</div>
+  </div>
+);
+
+const ErrorState = ({ error }: { error: string }) => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-red-600">Error: {error}</div>
+  </div>
+);
+
+const EmptyDatabaseState = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-muted-foreground">
+      Please select a database to view its pages.
+    </div>
+  </div>
+);
+
+const NoDataState = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-muted-foreground">
+      No pages found in this database.
+    </div>
+  </div>
+);
 
 const DatabaseTable = () => {
   const {
@@ -84,194 +129,119 @@ const DatabaseTable = () => {
     fetchPages();
   }, [activeDatabaseID, setPages, setIsLoading, setError, setRowSelection]);
 
-  // Define columns with stable references
-  const columns = useMemo<ColumnDef<NotionPage>[]>(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "title",
-        header: "Title",
-        cell: (info) => (
-          <div className="font-medium">
-            {(info.getValue() as string) || "Untitled"}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "created_time",
-        header: "Created",
-        cell: (info) => (
-          <div className="text-sm text-muted-foreground">
-            {new Date(info.getValue() as string).toLocaleDateString()}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "last_edited_time",
-        header: "Last Edited",
-        cell: (info) => (
-          <div className="text-sm text-muted-foreground">
-            {new Date(info.getValue() as string).toLocaleDateString()}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "url",
-        header: "Actions",
-        cell: (info) => (
-          <a
-            href={info.getValue() as string}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 text-sm underline"
-          >
-            Open in Notion
-          </a>
-        ),
-        enableSorting: false,
-      },
-    ],
-    []
-  );
-
-  // Create table instance with stable options
-  const tableOptions = useMemo(
-    () => ({
-      data: pages,
-      columns,
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      enableRowSelection: true,
-      state: {
-        sorting,
-        rowSelection,
-      },
-      onSortingChange: setSorting,
-      onRowSelectionChange: setRowSelection,
-      enableSorting: true,
-    }),
-    [pages, columns, sorting, rowSelection, setRowSelection]
-  );
+  // Define columns
+  const columns: ColumnDef<NotionPage>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: (info) => <TitleCell value={info.getValue() as string} />,
+    },
+    {
+      accessorKey: "created_time",
+      header: "Created",
+      cell: (info) => <DateCell value={info.getValue() as string} />,
+    },
+    {
+      accessorKey: "last_edited_time",
+      header: "Last Edited",
+      cell: (info) => <DateCell value={info.getValue() as string} />,
+    },
+    {
+      accessorKey: "url",
+      header: "Actions",
+      cell: (info) => <ActionCell url={info.getValue() as string} />,
+      enableSorting: false,
+    },
+  ];
 
   // Create table instance
-  const table = useReactTable(tableOptions);
+  const table = useReactTable({
+    data: pages,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: true,
+    state: {
+      sorting,
+      rowSelection,
+    },
+    onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableSorting: true,
+  });
 
-  // Memoize selection text to avoid recalculating on every render
-  const selectionText = useMemo(() => {
-    const selectedCount = table.getFilteredSelectedRowModel().rows.length;
-    const totalCount = table.getFilteredRowModel().rows.length;
-    return `${selectedCount} of ${totalCount} row(s) selected.`;
-  }, [table]);
+  // Selection text
+  const selectionText = (() => {
+    if (!table) return "0 of 0 row(s) selected.";
+
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    const totalRows = table.getFilteredRowModel().rows;
+
+    return `${selectedRows.length} of ${totalRows.length} row(s) selected.`;
+  })();
 
   // Drag selection handlers
-  const handleMouseDown = useCallback(
-    (rowIndex: number, event: React.MouseEvent) => {
-      // Prevent drag selection when clicking on checkboxes or links
-      const target = event.target as HTMLElement;
-      if (target.closest('input[type="checkbox"]') || target.closest("a")) {
-        return;
-      }
+  const handleMouseDown = (rowIndex: number, event: React.MouseEvent) => {
+    const tableRows = table?.getRowModel().rows ?? [];
 
-      // Handle Ctrl/Cmd + Click for individual toggle without drag
-      if (event.ctrlKey || event.metaKey) {
-        const row = table.getRowModel().rows[rowIndex];
-        if (row) {
-          row.toggleSelected();
-        }
-        return;
-      }
-
-      isMouseDown.current = true;
-      setIsDragging(true);
-      setDragStartIndex(rowIndex);
-      setDragEndIndex(rowIndex);
-
-      // Store the current selection state when starting drag
-      dragStartSelection.current = { ...rowSelection };
-
-      // Prevent text selection during drag
-      event.preventDefault();
-      document.body.style.userSelect = "none";
-    },
-    [rowSelection, table]
-  );
-
-  const handleMouseEnter = useCallback(
-    (rowIndex: number) => {
-      if (!isMouseDown.current || dragStartIndex === null) return;
-
-      setDragEndIndex(rowIndex);
-    },
-    [dragStartIndex]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    if (
-      !isMouseDown.current ||
-      dragStartIndex === null ||
-      dragEndIndex === null
-    ) {
-      isMouseDown.current = false;
-      setIsDragging(false);
+    // Prevent drag selection when clicking on checkboxes or links
+    const target = event.target as HTMLElement;
+    if (target.closest('input[type="checkbox"]') || target.closest("a")) {
       return;
     }
 
-    // Use the memoized drag range for consistency
-    const start = Math.min(dragStartIndex, dragEndIndex);
-    const end = Math.max(dragStartIndex, dragEndIndex);
-
-    const newSelection = { ...dragStartSelection.current };
-
-    // Determine if we should select or deselect based on the first row in the range
-    const firstRowInRange = table.getRowModel().rows[start];
-    const shouldSelect = firstRowInRange
-      ? !dragStartSelection.current[firstRowInRange.index]
-      : true;
-
-    // Apply the same action (select or deselect) to all rows in the range
-    for (let i = start; i <= end; i++) {
-      const row = table.getRowModel().rows[i];
+    // Handle Ctrl/Cmd + Click for individual toggle without drag
+    if (event.ctrlKey || event.metaKey) {
+      const row = tableRows[rowIndex];
       if (row) {
-        newSelection[row.index] = shouldSelect;
+        row.toggleSelected();
       }
+      return;
     }
 
-    setRowSelection(newSelection);
+    isMouseDown.current = true;
+    setIsDragging(true);
+    setDragStartIndex(rowIndex);
+    setDragEndIndex(rowIndex);
 
-    // Reset drag state and restore text selection
-    isMouseDown.current = false;
-    setIsDragging(false);
-    setDragStartIndex(null);
-    setDragEndIndex(null);
-    dragStartSelection.current = {};
-    document.body.style.userSelect = "";
-  }, [dragStartIndex, dragEndIndex, setRowSelection, table]);
+    // Store the current selection state when starting drag
+    dragStartSelection.current = { ...rowSelection };
 
-  // Memoize drag range calculations to avoid recalculating on every render
-  const dragRange = useMemo(() => {
+    // Prevent text selection during drag
+    event.preventDefault();
+    document.body.style.userSelect = "none";
+  };
+
+  const handleMouseEnter = (rowIndex: number) => {
+    if (!isMouseDown.current || dragStartIndex === null) return;
+
+    setDragEndIndex(rowIndex);
+  };
+
+  // Drag range calculations
+  const dragRange = (() => {
     if (!isDragging || dragStartIndex === null || dragEndIndex === null) {
       return null;
     }
@@ -279,14 +249,51 @@ const DatabaseTable = () => {
       start: Math.min(dragStartIndex, dragEndIndex),
       end: Math.max(dragStartIndex, dragEndIndex),
     };
-  }, [isDragging, dragStartIndex, dragEndIndex]);
+  })();
 
   // Global mouse up handler to handle mouse up outside the table
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      if (isMouseDown.current) {
-        handleMouseUp();
+      if (!isMouseDown.current) return;
+
+      if (dragStartIndex === null || dragEndIndex === null) {
+        isMouseDown.current = false;
+        setIsDragging(false);
+        return;
       }
+
+      // Get current table rows
+      const currentTableRows = table?.getRowModel().rows ?? [];
+
+      // Calculate drag range
+      const start = Math.min(dragStartIndex, dragEndIndex);
+      const end = Math.max(dragStartIndex, dragEndIndex);
+
+      const newSelection = { ...dragStartSelection.current };
+
+      // Determine if we should select or deselect based on the first row in the range
+      const firstRowInRange = currentTableRows[start];
+      const shouldSelect = firstRowInRange
+        ? !dragStartSelection.current[firstRowInRange.index]
+        : true;
+
+      // Apply the same action (select or deselect) to all rows in the range
+      for (let i = start; i <= end; i++) {
+        const row = currentTableRows[i];
+        if (row) {
+          newSelection[row.index] = shouldSelect;
+        }
+      }
+
+      setRowSelection(newSelection);
+
+      // Reset drag state and restore text selection
+      isMouseDown.current = false;
+      setIsDragging(false);
+      setDragStartIndex(null);
+      setDragEndIndex(null);
+      dragStartSelection.current = {};
+      document.body.style.userSelect = "";
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -310,46 +317,23 @@ const DatabaseTable = () => {
       // Cleanup on unmount
       document.body.style.userSelect = "";
     };
-  }, [handleMouseUp, isDragging]);
+  }, [isDragging, dragStartIndex, dragEndIndex, setRowSelection, table]);
 
-  // Loading state
+  // Early returns with memoized components
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading pages...</div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
-  // Error state
   if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-red-600">Error: {error}</div>
-      </div>
-    );
+    return <ErrorState error={error} />;
   }
 
-  // No active database
   if (!activeDatabaseID) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">
-          Please select a database to view its pages.
-        </div>
-      </div>
-    );
+    return <EmptyDatabaseState />;
   }
 
-  // No pages found
   if (pages.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">
-          No pages found in this database.
-        </div>
-      </div>
-    );
+    return <NoDataState />;
   }
 
   return (
@@ -359,9 +343,7 @@ const DatabaseTable = () => {
       </div>
 
       <div
-        className={`${
-          isDragging ? "select-none cursor-grabbing" : "cursor-auto"
-        }`}
+        className={isDragging ? "select-none cursor-grabbing" : "cursor-auto"}
       >
         <Table>
           <TableCaption>
@@ -403,6 +385,7 @@ const DatabaseTable = () => {
               table={table}
               isDragging={isDragging}
               dragRange={dragRange}
+              rowSelection={rowSelection}
               onMouseDown={handleMouseDown}
               onMouseEnter={handleMouseEnter}
             />
