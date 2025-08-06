@@ -44,8 +44,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Get query parameters for pagination and filtering
     const { searchParams } = request.nextUrl;
     const pageSize = Math.min(
-      parseInt(searchParams.get("page_size") || "100"),
-      100
+      parseInt(searchParams.get("page_size") || "50"),
+      50
     );
     const startCursor = searchParams.get("start_cursor") || undefined;
 

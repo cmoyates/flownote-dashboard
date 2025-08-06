@@ -33,12 +33,14 @@ function DatabaseLoader() {
 // Main layout component with stable structure
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] flex-col items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+    <div className="font-sans flex flex-col items-center justify-items-center min-h-screen max-h-screen p-20 gap-8">
       <DatabaseLoader />
-      <div className="flex flex-row items-center gap-4 justify-end w-full">
+      <div className="flex flex-row items-center gap-4 justify-between w-full">
+        <h1 className="font-bold text-2xl">FlowNote Dashboard</h1>
         <DatabaseCombobox />
       </div>
-      <div className="w-full flex-1 h-full">
+
+      <div className="flex-1 w-full h-full bg-red-500/5">
         <DatabaseTable />
       </div>
     </div>
