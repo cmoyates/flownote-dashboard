@@ -26,7 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { NotionPage, NotionPagesResponse } from "@/types/notion";
-import DatabaseTableRow from "./DatabaseTableRow";
+import DatabaseTableBodyRows from "./DatabaseTableBodyRows";
 
 const DatabaseTable = () => {
   const {
@@ -157,21 +157,34 @@ const DatabaseTable = () => {
     []
   );
 
+  // Create table instance with stable options
+  const tableOptions = useMemo(
+    () => ({
+      data: pages,
+      columns,
+      getCoreRowModel: getCoreRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      enableRowSelection: true,
+      state: {
+        sorting,
+        rowSelection,
+      },
+      onSortingChange: setSorting,
+      onRowSelectionChange: setRowSelection,
+      enableSorting: true,
+    }),
+    [pages, columns, sorting, rowSelection, setRowSelection]
+  );
+
   // Create table instance
-  const table = useReactTable({
-    data: pages,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    enableRowSelection: true,
-    state: {
-      sorting,
-      rowSelection,
-    },
-    onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
-    enableSorting: true,
-  });
+  const table = useReactTable(tableOptions);
+
+  // Memoize selection text to avoid recalculating on every render
+  const selectionText = useMemo(() => {
+    const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+    const totalCount = table.getFilteredRowModel().rows.length;
+    return `${selectedCount} of ${totalCount} row(s) selected.`;
+  }, [table]);
 
   // Drag selection handlers
   const handleMouseDown = useCallback(
@@ -226,7 +239,7 @@ const DatabaseTable = () => {
       return;
     }
 
-    // Apply the drag selection
+    // Use the memoized drag range for consistency
     const start = Math.min(dragStartIndex, dragEndIndex);
     const end = Math.max(dragStartIndex, dragEndIndex);
 
@@ -256,6 +269,17 @@ const DatabaseTable = () => {
     dragStartSelection.current = {};
     document.body.style.userSelect = "";
   }, [dragStartIndex, dragEndIndex, setRowSelection, table]);
+
+  // Memoize drag range calculations to avoid recalculating on every render
+  const dragRange = useMemo(() => {
+    if (!isDragging || dragStartIndex === null || dragEndIndex === null) {
+      return null;
+    }
+    return {
+      start: Math.min(dragStartIndex, dragEndIndex),
+      end: Math.max(dragStartIndex, dragEndIndex),
+    };
+  }, [isDragging, dragStartIndex, dragEndIndex]);
 
   // Global mouse up handler to handle mouse up outside the table
   useEffect(() => {
@@ -331,10 +355,7 @@ const DatabaseTable = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
+        <div className="text-sm text-muted-foreground">{selectionText}</div>
       </div>
 
       <div
@@ -378,26 +399,13 @@ const DatabaseTable = () => {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row, index) => {
-              const isInDragRange =
-                isDragging &&
-                dragStartIndex !== null &&
-                dragEndIndex !== null &&
-                index >= Math.min(dragStartIndex, dragEndIndex) &&
-                index <= Math.max(dragStartIndex, dragEndIndex);
-
-              return (
-                <DatabaseTableRow
-                  key={row.id}
-                  row={row}
-                  rowIndex={index}
-                  isDragging={isDragging}
-                  isInDragRange={isInDragRange}
-                  onMouseDown={handleMouseDown}
-                  onMouseEnter={handleMouseEnter}
-                />
-              );
-            })}
+            <DatabaseTableBodyRows
+              table={table}
+              isDragging={isDragging}
+              dragRange={dragRange}
+              onMouseDown={handleMouseDown}
+              onMouseEnter={handleMouseEnter}
+            />
           </TableBody>
         </Table>
       </div>

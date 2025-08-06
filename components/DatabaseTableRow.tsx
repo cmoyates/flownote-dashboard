@@ -12,25 +12,26 @@ interface DatabaseTableRowProps {
   onMouseEnter?: (rowIndex: number) => void;
 }
 
-const DatabaseTableRow = ({
-  row,
-  rowIndex,
-  isDragging = false,
-  isInDragRange = false,
-  onMouseDown,
-  onMouseEnter,
-}: DatabaseTableRowProps) => {
-  const handleMouseDown = (event: React.MouseEvent) => {
-    onMouseDown?.(rowIndex, event);
-  };
+const DatabaseTableRow = React.memo(
+  ({
+    row,
+    rowIndex,
+    isDragging = false,
+    isInDragRange = false,
+    onMouseDown,
+    onMouseEnter,
+  }: DatabaseTableRowProps) => {
+    const handleMouseDown = (event: React.MouseEvent) => {
+      onMouseDown?.(rowIndex, event);
+    };
 
-  const handleMouseEnter = () => {
-    onMouseEnter?.(rowIndex);
-  };
+    const handleMouseEnter = () => {
+      onMouseEnter?.(rowIndex);
+    };
 
-  return (
-    <TableRow
-      className={`
+    return (
+      <TableRow
+        className={`
         cursor-pointer
         ${
           row.getIsSelected()
@@ -39,18 +40,22 @@ const DatabaseTableRow = ({
         } 
         ${isDragging && isInDragRange ? "bg-primary/20 border-primary/50" : ""}
       `
-        .trim()
-        .replace(/\s+/g, " ")}
-      onMouseDown={handleMouseDown}
-      onMouseEnter={handleMouseEnter}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id} className="relative">
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
-};
+          .trim()
+          .replace(/\s+/g, " ")}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={handleMouseEnter}
+      >
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id} className="relative">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+  }
+);
+
+// Add display name for better debugging
+DatabaseTableRow.displayName = "DatabaseTableRow";
 
 export default DatabaseTableRow;

@@ -5,7 +5,7 @@ import DatabaseTable from "@/components/DatabaseTable";
 import { Button } from "@/components/ui/button";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import type { NotionDatabasesResponse } from "@/types/notion";
-import { useEffect } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 
 export default function Home() {
   const { setAllDatabases, activeDatabaseID, rowSelection, pages } =
@@ -28,17 +28,19 @@ export default function Home() {
     fetchDatabases();
   }, [setAllDatabases]);
 
-  const handleClick = () => {
-    // Get selected pages based on rowSelection state
-    const selectedPages = Object.keys(rowSelection)
+  // Memoize selected pages calculation to avoid recalculating on every render
+  const selectedPages = useMemo(() => {
+    return Object.keys(rowSelection)
       .filter((key) => rowSelection[key])
       .map((index) => pages[parseInt(index)])
       .filter(Boolean);
+  }, [rowSelection, pages]);
 
+  const handleClick = useCallback(() => {
     console.log("Active Database ID:", activeDatabaseID);
     console.log("Selected Pages:", selectedPages);
     console.log("Row Selection State:", rowSelection);
-  };
+  }, [activeDatabaseID, selectedPages, rowSelection]);
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] flex-col items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
