@@ -1,4 +1,5 @@
 import { NotionDatabase, NotionPage } from "@/types/notion";
+import { RowSelectionState, Updater } from "@tanstack/react-table";
 import { create } from "zustand";
 
 interface DatabaseTableStoreState {
@@ -7,11 +8,13 @@ interface DatabaseTableStoreState {
   pages: NotionPage[];
   isLoading: boolean;
   error: string | null;
+  rowSelection: RowSelectionState;
   setAllDatabases: (allDatabases: NotionDatabase[]) => void;
   setActiveDatabaseID: (id: string) => void;
   setPages: (pages: NotionPage[]) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setRowSelection: (updater: Updater<RowSelectionState>) => void;
 }
 
 export const useDatabaseTableStore = create<DatabaseTableStoreState>((set) => {
@@ -37,6 +40,13 @@ export const useDatabaseTableStore = create<DatabaseTableStoreState>((set) => {
     set({ error });
   };
 
+  const setRowSelection = (updater: Updater<RowSelectionState>) => {
+    set((state) => ({
+      rowSelection:
+        typeof updater === "function" ? updater(state.rowSelection) : updater,
+    }));
+  };
+
   // #endregion Functions
 
   return {
@@ -45,10 +55,12 @@ export const useDatabaseTableStore = create<DatabaseTableStoreState>((set) => {
     pages: [],
     isLoading: false,
     error: null,
+    rowSelection: {},
     setAllDatabases,
     setActiveDatabaseID,
     setPages,
     setIsLoading,
     setError,
+    setRowSelection,
   };
 });

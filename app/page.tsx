@@ -8,7 +8,8 @@ import type { NotionDatabasesResponse } from "@/types/notion";
 import { useEffect } from "react";
 
 export default function Home() {
-  const { setAllDatabases, activeDatabaseID } = useDatabaseTableStore();
+  const { setAllDatabases, activeDatabaseID, rowSelection, pages } =
+    useDatabaseTableStore();
 
   useEffect(() => {
     const fetchDatabases = async () => {
@@ -25,16 +26,24 @@ export default function Home() {
     };
 
     fetchDatabases();
-  }, []);
+  }, [setAllDatabases]);
 
   const handleClick = () => {
+    // Get selected pages based on rowSelection state
+    const selectedPages = Object.keys(rowSelection)
+      .filter((key) => rowSelection[key])
+      .map((index) => pages[parseInt(index)])
+      .filter(Boolean);
+
     console.log("Active Database ID:", activeDatabaseID);
+    console.log("Selected Pages:", selectedPages);
+    console.log("Row Selection State:", rowSelection);
   };
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] flex-col items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <div className="flex flex-row items-center gap-4 justify-end w-full">
-        <Button onClick={handleClick}>Click me</Button>
+        <Button onClick={handleClick}>Log Selected Pages</Button>
         <DatabaseCombobox />
       </div>
       <div className="w-full flex-1 h-full">

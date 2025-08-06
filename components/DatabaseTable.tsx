@@ -17,6 +17,7 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { NotionPage, NotionPagesResponse } from "@/types/notion";
 import DatabaseTableRow from "./DatabaseTableRow";
@@ -27,9 +28,11 @@ const DatabaseTable = () => {
     pages,
     isLoading,
     error,
+    rowSelection,
     setPages,
     setIsLoading,
     setError,
+    setRowSelection,
   } = useDatabaseTableStore();
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -41,6 +44,8 @@ const DatabaseTable = () => {
     const fetchPages = async () => {
       setIsLoading(true);
       setError(null);
+      // Clear row selection when database changes
+      setRowSelection({});
 
       try {
         const response = await fetch(
@@ -64,11 +69,35 @@ const DatabaseTable = () => {
     };
 
     fetchPages();
-  }, [activeDatabaseID, setPages, setIsLoading, setError]);
+  }, [activeDatabaseID, setPages, setIsLoading, setError, setRowSelection]);
 
   // Define columns with stable references
   const columns = useMemo<ColumnDef<NotionPage>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
       {
         accessorKey: "title",
         header: "Title",
@@ -121,10 +150,13 @@ const DatabaseTable = () => {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: true,
     state: {
       sorting,
+      rowSelection,
     },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
     enableSorting: true,
   });
 
@@ -169,47 +201,56 @@ const DatabaseTable = () => {
   }
 
   return (
-    <Table>
-      <TableCaption>
-        Pages from the selected Notion database ({pages.length} total)
-      </TableCaption>
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead key={header.id}>
-                <div
-                  className={
-                    header.column.getCanSort()
-                      ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
-                      : ""
-                  }
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                  {header.column.getCanSort() && (
-                    <span className="ml-1">
-                      {{
-                        asc: "↑",
-                        desc: "↓",
-                      }[header.column.getIsSorted() as string] ?? "↕"}
-                    </span>
-                  )}
-                </div>
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <DatabaseTableRow key={row.id} row={row} />
-        ))}
-      </TableBody>
-    </Table>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+      </div>
+
+      <Table>
+        <TableCaption>
+          Pages from the selected Notion database ({pages.length} total)
+        </TableCaption>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  <div
+                    className={
+                      header.column.getCanSort()
+                        ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
+                        : ""
+                    }
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                    {header.column.getCanSort() && (
+                      <span className="ml-1">
+                        {{
+                          asc: "↑",
+                          desc: "↓",
+                        }[header.column.getIsSorted() as string] ?? "↕"}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <DatabaseTableRow key={row.id} row={row} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
