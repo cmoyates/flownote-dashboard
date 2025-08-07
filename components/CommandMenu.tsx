@@ -62,6 +62,48 @@ export const CommandMenu = () => {
     command();
   };
 
+  const runChatWithSelectedPages = async (prompt: string) => {
+    // Get selected pages
+    const selectedPages = pages.filter(
+      (_, index) => rowSelection[index] === true,
+    );
+
+    if (selectedPages.length === 0) {
+      console.log("No pages selected");
+      return;
+    }
+
+    try {
+      // Extract page IDs
+      const pageIds = selectedPages.map((page) => page.id);
+
+      // Convert pages to markdown
+      const result = await convertPagesToMarkdown(pageIds);
+
+      if (result.processedCount === 0) {
+        console.error("No pages could be converted to markdown");
+        return;
+      }
+
+      // Create the summarization prompt
+      const markdownContent = Object.entries(result.data)
+        .map(([pageId, markdown]) => {
+          const pageName =
+            selectedPages.find((p) => p.id === pageId)?.title || "Untitled";
+          return `## ${pageName}\n\n${markdown}`;
+        })
+        .join("\n\n---\n\n");
+
+      const chatPrompt = `${prompt}\n\n${markdownContent}`;
+
+      sendMessage({
+        text: chatPrompt,
+      });
+    } catch (error) {
+      console.error(`Failed to run chat command ${prompt}:`, error);
+    }
+  };
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Type a command or search..." />
@@ -160,52 +202,10 @@ export const CommandMenu = () => {
               <CommandItem
                 onSelect={() =>
                   runCommand(async () => {
-                    // Get selected pages
-                    const selectedPages = pages.filter(
-                      (_, index) => rowSelection[index] === true,
+                    // Run chat command with selected pages
+                    await runChatWithSelectedPages(
+                      "Summarize these Notion pages:",
                     );
-
-                    if (selectedPages.length === 0) {
-                      console.log("No pages selected");
-                      return;
-                    }
-
-                    console.log(
-                      `Summarizing ${selectedPages.length} selected page(s)...`,
-                    );
-
-                    try {
-                      // Extract page IDs
-                      const pageIds = selectedPages.map((page) => page.id);
-
-                      // Convert pages to markdown
-                      const result = await convertPagesToMarkdown(pageIds);
-
-                      if (result.processedCount === 0) {
-                        console.error(
-                          "No pages could be converted to markdown",
-                        );
-                        return;
-                      }
-
-                      // Create the summarization prompt
-                      const markdownContent = Object.entries(result.data)
-                        .map(([pageId, markdown]) => {
-                          const pageName =
-                            selectedPages.find((p) => p.id === pageId)?.title ||
-                            "Untitled";
-                          return `## ${pageName}\n\n${markdown}`;
-                        })
-                        .join("\n\n---\n\n");
-
-                      const summaryPrompt = `Summarize these Notion pages:\n\n${markdownContent}`;
-
-                      sendMessage({
-                        text: summaryPrompt,
-                      });
-                    } catch (error) {
-                      console.error("Failed to summarize pages:", error);
-                    }
                   })
                 }
               >
