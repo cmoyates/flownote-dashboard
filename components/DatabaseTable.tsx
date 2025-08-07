@@ -375,63 +375,64 @@ const DatabaseTable = () => {
   }
 
   return (
-    <div className="space-y-4 flex-1 h-full w-full">
+    <div className="flex flex-col h-full w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{selectionText}</div>
       </div>
 
-      <ScrollArea className="h-full w-full rounded-md border">
-        <div
-          className={isDragging ? "select-none cursor-grabbing" : "cursor-auto"}
-        >
-          <Table>
-            <TableCaption>
-              Pages from the selected Notion database ({pages.length} total)
-            </TableCaption>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      <div
-                        className={
-                          header.column.getCanSort()
-                            ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
-                            : ""
-                        }
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {header.column.getCanSort() && (
-                          <span className="ml-1">
-                            {{
-                              asc: "↑",
-                              desc: "↓",
-                            }[header.column.getIsSorted() as string] ?? "↕"}
-                          </span>
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              <DatabaseTableBodyRows
-                table={table}
-                isDragging={isDragging}
-                dragRange={dragRange}
-                rowSelection={rowSelection}
-                onMouseDown={handleMouseDown}
-                onMouseEnter={handleMouseEnter}
-              />
-            </TableBody>
-          </Table>
-        </div>
-      </ScrollArea>
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full w-full rounded-md border">
+          <div
+            className={
+              isDragging ? "select-none cursor-grabbing" : "cursor-auto"
+            }
+          >
+            <Table>
+              <TableHeader className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        <div
+                          className={
+                            header.column.getCanSort()
+                              ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
+                              : ""
+                          }
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {header.column.getCanSort() && (
+                            <span className="ml-1">
+                              {{
+                                asc: "↑",
+                                desc: "↓",
+                              }[header.column.getIsSorted() as string] ?? "↕"}
+                            </span>
+                          )}
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                <DatabaseTableBodyRows
+                  table={table}
+                  isDragging={isDragging}
+                  dragRange={dragRange}
+                  rowSelection={rowSelection}
+                  onMouseDown={handleMouseDown}
+                  onMouseEnter={handleMouseEnter}
+                />
+              </TableBody>
+            </Table>
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2">

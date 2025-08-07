@@ -33,14 +33,14 @@ function DatabaseLoader() {
 // Main layout component with stable structure
 export default function Home() {
   return (
-    <div className="font-sans flex flex-col items-center justify-items-center min-h-screen max-h-screen p-20 gap-8">
+    <div className="font-sans flex flex-col items-center justify-items-center h-screen px-24 py-12 gap-8">
       <DatabaseLoader />
       <div className="flex flex-row items-center gap-4 justify-between w-full">
         <h1 className="font-bold text-2xl">FlowNote Dashboard</h1>
         <DatabaseCombobox />
       </div>
 
-      <div className="flex-1 w-full h-full bg-red-500/5">
+      <div className="flex-1 w-full min-h-0">
         <DatabaseTable />
       </div>
     </div>
