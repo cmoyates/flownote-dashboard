@@ -61,3 +61,16 @@ export interface NotionAPIError {
   details?: string;
   code?: string;
 }
+
+// Notion Pages to Markdown API Types
+export interface NotionPageToMarkdownRequest {
+  pageIds: string[];
+}
+
+export interface NotionPageToMarkdownResponse {
+  success: boolean;
+  data: Record<string, string>;
+  errors?: Record<string, string>;
+  processedCount: number;
+  errorCount: number;
+}

@@ -12,10 +12,12 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
+import { convertPagesToMarkdown } from "@/lib/notion-markdown";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
-  const { pages, setRowSelection, rowSelection } = useDatabaseTableStore();
+  const { pages, setRowSelection, rowSelection, selectedRowCount } =
+    useDatabaseTableStore();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -49,15 +51,13 @@ export const CommandMenu = () => {
     command();
   };
 
-  const selectedRowsCount = Object.keys(rowSelection).length;
-
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
-        {selectedRowsCount > 0 && (
+        {selectedRowCount > 0 && (
           <>
             <CommandGroup heading="Actions">
               <CommandItem
@@ -76,8 +76,64 @@ export const CommandMenu = () => {
                   })
                 }
               >
-                <span>Log Selected Pages ({selectedRowsCount})</span>
+                <span>Log Selected Pages ({selectedRowCount})</span>
                 <CommandShortcut>⌘L</CommandShortcut>
+              </CommandItem>
+              <CommandItem
+                onSelect={() =>
+                  runCommand(async () => {
+                    // Get selected pages
+                    const selectedPages = pages.filter(
+                      (_, index) => rowSelection[index] === true
+                    );
+
+                    if (selectedPages.length === 0) {
+                      console.log("No pages selected");
+                      return;
+                    }
+
+                    console.log(
+                      `Converting ${selectedPages.length} selected page(s) to markdown...`
+                    );
+
+                    try {
+                      // Extract page IDs
+                      const pageIds = selectedPages.map((page) => page.id);
+
+                      // Convert pages to markdown
+                      const result = await convertPagesToMarkdown(pageIds);
+
+                      console.log(
+                        Object.entries(result.data).map(([_, md]) => md)
+                      );
+
+                      // Log any errors
+                      if (
+                        result.errors &&
+                        Object.keys(result.errors).length > 0
+                      ) {
+                        console.error("Conversion errors:", result.errors);
+                      }
+
+                      console.log(
+                        `✅ Successfully converted ${result.processedCount} page(s) to markdown`
+                      );
+                      if (result.errorCount > 0) {
+                        console.warn(
+                          `⚠️ ${result.errorCount} page(s) failed to convert`
+                        );
+                      }
+                    } catch (error) {
+                      console.error(
+                        "Failed to convert pages to markdown:",
+                        error
+                      );
+                    }
+                  })
+                }
+              >
+                <span>Test Markdown API ({selectedRowCount})</span>
+                <CommandShortcut>⌘M</CommandShortcut>
               </CommandItem>
               <CommandItem
                 onSelect={() =>
@@ -87,7 +143,7 @@ export const CommandMenu = () => {
                   })
                 }
               >
-                <span>Clear Selections ({selectedRowsCount})</span>
+                <span>Clear Selections ({selectedRowCount})</span>
                 <CommandShortcut>⌘⌫</CommandShortcut>
               </CommandItem>
             </CommandGroup>
