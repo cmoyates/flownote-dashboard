@@ -14,6 +14,7 @@ import {
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { convertPagesToMarkdown } from "@/lib/notion-markdown";
 import { useChat } from "@ai-sdk/react";
+import { toast } from "sonner";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
@@ -79,10 +80,9 @@ export const CommandMenu = () => {
                     );
                     console.log("Selected notion pages:", selectedPages);
 
-                    // Also show a brief notification
-                    // alert(
-                    //   `Logged ${selectedPages.length} selected page(s) to console. Check DevTools > Console.`
-                    // );
+                    toast.success(
+                      `Logged ${selectedPages.length} selected page(s) to console.`,
+                    );
                   })
                 }
               >
@@ -128,15 +128,27 @@ export const CommandMenu = () => {
                       console.log(
                         `✅ Successfully converted ${result.processedCount} page(s) to markdown`,
                       );
+
+                      toast.success(
+                        `Converted ${result.processedCount} page(s) to markdown.`,
+                      );
                       if (result.errorCount > 0) {
                         console.warn(
                           `⚠️ ${result.errorCount} page(s) failed to convert`,
+                        );
+
+                        toast.error(
+                          `Failed to convert ${result.errorCount} page(s). Check console for details.`,
                         );
                       }
                     } catch (error) {
                       console.error(
                         "Failed to convert pages to markdown:",
                         error,
+                      );
+
+                      toast.error(
+                        "Failed to convert pages to markdown. Check console for details.",
                       );
                     }
                   })
