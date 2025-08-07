@@ -24,15 +24,18 @@ const DatabaseCombobox = () => {
   const { allDatabases, activeDatabaseID, setActiveDatabaseID } =
     useDatabaseTableStore();
 
-  const activeDatabase = useMemo(() => 
-    allDatabases.find((database) => database.id === activeDatabaseID),
-    [allDatabases, activeDatabaseID]
+  const activeDatabase = useMemo(
+    () => allDatabases.find((database) => database.id === activeDatabaseID),
+    [allDatabases, activeDatabaseID],
   );
 
-  const handleSelect = useCallback((databaseId: string) => {
-    setActiveDatabaseID(databaseId === activeDatabaseID ? "" : databaseId);
-    setOpen(false);
-  }, [activeDatabaseID, setActiveDatabaseID]);
+  const handleSelect = useCallback(
+    (databaseId: string) => {
+      setActiveDatabaseID(databaseId === activeDatabaseID ? "" : databaseId);
+      setOpen(false);
+    },
+    [activeDatabaseID, setActiveDatabaseID],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -64,7 +67,7 @@ const DatabaseCombobox = () => {
                       "mr-2 h-4 w-4",
                       activeDatabaseID === database.id
                         ? "opacity-100"
-                        : "opacity-0"
+                        : "opacity-0",
                     )}
                   />
                   {database.title}

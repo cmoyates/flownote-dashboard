@@ -13,11 +13,21 @@ import {
 } from "@/components/ui/command";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { convertPagesToMarkdown } from "@/lib/notion-markdown";
+import { useChat } from "@ai-sdk/react";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
   const { pages, setRowSelection, rowSelection, selectedRowCount } =
     useDatabaseTableStore();
+
+  const { sendMessage } = useChat({
+    onFinish: (message) => {
+      const lastPart = message.message.parts[message.message.parts.length - 1];
+      if (lastPart.type === "text") {
+        console.log(lastPart.text);
+      }
+    },
+  });
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -65,7 +75,7 @@ export const CommandMenu = () => {
                   runCommand(() => {
                     // Log selected pages
                     const selectedPages = pages.filter(
-                      (_, index) => rowSelection[index] === true
+                      (_, index) => rowSelection[index] === true,
                     );
                     console.log("Selected notion pages:", selectedPages);
 
@@ -84,7 +94,7 @@ export const CommandMenu = () => {
                   runCommand(async () => {
                     // Get selected pages
                     const selectedPages = pages.filter(
-                      (_, index) => rowSelection[index] === true
+                      (_, index) => rowSelection[index] === true,
                     );
 
                     if (selectedPages.length === 0) {
@@ -93,7 +103,7 @@ export const CommandMenu = () => {
                     }
 
                     console.log(
-                      `Converting ${selectedPages.length} selected page(s) to markdown...`
+                      `Converting ${selectedPages.length} selected page(s) to markdown...`,
                     );
 
                     try {
@@ -104,7 +114,7 @@ export const CommandMenu = () => {
                       const result = await convertPagesToMarkdown(pageIds);
 
                       console.log(
-                        Object.entries(result.data).map(([_, md]) => md)
+                        Object.entries(result.data).map(([_, md]) => md),
                       );
 
                       // Log any errors
@@ -116,17 +126,17 @@ export const CommandMenu = () => {
                       }
 
                       console.log(
-                        `✅ Successfully converted ${result.processedCount} page(s) to markdown`
+                        `✅ Successfully converted ${result.processedCount} page(s) to markdown`,
                       );
                       if (result.errorCount > 0) {
                         console.warn(
-                          `⚠️ ${result.errorCount} page(s) failed to convert`
+                          `⚠️ ${result.errorCount} page(s) failed to convert`,
                         );
                       }
                     } catch (error) {
                       console.error(
                         "Failed to convert pages to markdown:",
-                        error
+                        error,
                       );
                     }
                   })
@@ -134,6 +144,61 @@ export const CommandMenu = () => {
               >
                 <span>Test Markdown API ({selectedRowCount})</span>
                 <CommandShortcut>⌘M</CommandShortcut>
+              </CommandItem>
+              <CommandItem
+                onSelect={() =>
+                  runCommand(async () => {
+                    // Get selected pages
+                    const selectedPages = pages.filter(
+                      (_, index) => rowSelection[index] === true,
+                    );
+
+                    if (selectedPages.length === 0) {
+                      console.log("No pages selected");
+                      return;
+                    }
+
+                    console.log(
+                      `Summarizing ${selectedPages.length} selected page(s)...`,
+                    );
+
+                    try {
+                      // Extract page IDs
+                      const pageIds = selectedPages.map((page) => page.id);
+
+                      // Convert pages to markdown
+                      const result = await convertPagesToMarkdown(pageIds);
+
+                      if (result.processedCount === 0) {
+                        console.error(
+                          "No pages could be converted to markdown",
+                        );
+                        return;
+                      }
+
+                      // Create the summarization prompt
+                      const markdownContent = Object.entries(result.data)
+                        .map(([pageId, markdown]) => {
+                          const pageName =
+                            selectedPages.find((p) => p.id === pageId)?.title ||
+                            "Untitled";
+                          return `## ${pageName}\n\n${markdown}`;
+                        })
+                        .join("\n\n---\n\n");
+
+                      const summaryPrompt = `Summarize these Notion pages:\n\n${markdownContent}`;
+
+                      sendMessage({
+                        text: summaryPrompt,
+                      });
+                    } catch (error) {
+                      console.error("Failed to summarize pages:", error);
+                    }
+                  })
+                }
+              >
+                <span>Summarize Pages ({selectedRowCount})</span>
+                <CommandShortcut>⌘S</CommandShortcut>
               </CommandItem>
               <CommandItem
                 onSelect={() =>
@@ -158,7 +223,7 @@ export const CommandMenu = () => {
               runCommand(() => {
                 // Focus on database selector
                 const combobox = document.querySelector(
-                  '[role="combobox"]'
+                  '[role="combobox"]',
                 ) as HTMLElement;
                 if (combobox) {
                   combobox.click();

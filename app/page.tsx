@@ -36,14 +36,14 @@ export default function Home() {
   return (
     <>
       <CommandMenu />
-      <div className="font-sans flex flex-col items-center justify-items-center h-screen px-24 py-12 gap-8">
+      <div className="flex h-screen flex-col items-center justify-items-center gap-8 px-24 py-12 font-sans">
         <DatabaseLoader />
-        <div className="flex flex-row items-center gap-4 justify-between w-full">
-          <h1 className="font-bold text-2xl">FlowNote Dashboard</h1>
+        <div className="flex w-full flex-row items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold">FlowNote Dashboard</h1>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground hidden sm:block">
+            <div className="text-muted-foreground hidden text-sm sm:block">
               Press{" "}
-              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <kbd className="bg-muted text-muted-foreground pointer-events-none inline-flex h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none">
                 /
               </kbd>{" "}
               for commands
@@ -52,7 +52,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex-1 w-full min-h-0">
+        <div className="min-h-0 w-full flex-1">
           <DatabaseTable />
         </div>
       </div>
