@@ -16,19 +16,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableCaption,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { NotionPage, NotionPagesResponse } from "@/types/notion";
