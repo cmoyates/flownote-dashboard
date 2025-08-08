@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -14,10 +14,17 @@ import {
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import { convertPagesToMarkdown } from "@/lib/notion-markdown";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const recordingToastIdRef = useRef<string | number | null>(null);
+
   const { pages, setRowSelection, rowSelection, selectedRowCount } =
     useDatabaseTableStore();
 
@@ -29,6 +36,124 @@ export const CommandMenu = () => {
       }
     },
   });
+
+  const { sendMessage: sendVoiceNote } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/voice-note",
+    }),
+    onFinish: (message) => {
+      const lastPart = message.message.parts[message.message.parts.length - 1];
+      if (lastPart.type === "text") {
+        console.log("Voice note response:", lastPart.text);
+        toast.success("Voice note processed successfully!");
+      }
+    },
+    onError: (error) => {
+      console.error("Voice note processing error:", error);
+      toast.error("Failed to process voice note. Please try again.");
+    },
+  });
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+
+      // Dismiss the persistent recording toast
+      if (recordingToastIdRef.current) {
+        toast.dismiss(recordingToastIdRef.current);
+        recordingToastIdRef.current = null;
+      }
+
+      toast.info("Recording stopped. Processing...");
+    }
+  }, [recording]);
+
+  // Direct function for toast button that doesn't rely on useCallback closure
+  const handleStopRecordingFromToast = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+
+      // Dismiss the persistent recording toast
+      if (recordingToastIdRef.current) {
+        toast.dismiss(recordingToastIdRef.current);
+        recordingToastIdRef.current = null;
+      }
+
+      toast.info("Recording stopped. Processing...");
+    }
+  };
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+      });
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        setTranscribing(true);
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const form = new FormData();
+        form.append("audio", blob, "recording.webm");
+
+        try {
+          const res = await fetch("/api/transcribe", {
+            method: "POST",
+            body: form,
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+
+          const data = await res.json();
+          const transcribedText = data.text ?? "(no text)";
+
+          // Send the transcribed text to the voice note chat
+          sendVoiceNote({
+            text: `Please clean up the following transcription:\n\n${transcribedText}`,
+          });
+
+          toast.success("Audio transcribed and sent to voice note processor!");
+        } catch (error) {
+          console.error("Transcription failed:", error);
+          toast.error("Failed to transcribe audio. Please try again.");
+        } finally {
+          setTranscribing(false);
+        }
+
+        // Stop mic tracks
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setRecording(true);
+
+      // Show persistent toast with stop recording button
+      recordingToastIdRef.current = toast("Recording voice note...", {
+        description: "Click 'Stop Recording' to finish or press ⌘R",
+        action: {
+          label: "Stop Recording",
+          onClick: handleStopRecordingFromToast,
+        },
+        duration: Infinity,
+        position: "bottom-right",
+      });
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      toast.error("Failed to access microphone. Please check permissions.");
+    }
+  }, [sendVoiceNote]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -51,11 +176,28 @@ export const CommandMenu = () => {
         e.preventDefault();
         setOpen((open) => !open);
       }
+      // Voice recording shortcut (Cmd+R / Ctrl+R)
+      if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
+        const target = e.target as HTMLElement;
+        const isInInputField =
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.contentEditable === "true";
+
+        if (!isInInputField && !transcribing) {
+          e.preventDefault();
+          if (recording) {
+            stopRecording();
+          } else {
+            startRecording();
+          }
+        }
+      }
     };
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [recording, transcribing, startRecording, stopRecording]);
 
   const runCommand = (command: () => void) => {
     setOpen(false);
@@ -109,6 +251,36 @@ export const CommandMenu = () => {
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+
+        {recording && (
+          <>
+            <CommandGroup heading="Active">
+              <CommandItem
+                onSelect={() =>
+                  runCommand(() => {
+                    if (recording) {
+                      stopRecording();
+                    } else if (!transcribing) {
+                      startRecording();
+                    }
+                  })
+                }
+                disabled={transcribing}
+              >
+                <span>
+                  {recording
+                    ? "Stop Recording Voice Note"
+                    : transcribing
+                      ? "Processing..."
+                      : "Record Voice Note"}
+                </span>
+                <CommandShortcut>⌘R</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandSeparator />
+          </>
+        )}
 
         {selectedRowCount > 0 && (
           <>
@@ -214,6 +386,19 @@ export const CommandMenu = () => {
               </CommandItem>
               <CommandItem
                 onSelect={() =>
+                  runCommand(async () => {
+                    // Run chat command with selected pages
+                    await runChatWithSelectedPages(
+                      "Extract all tasks (todo items) from these notion pages and format them into a markdown task list:",
+                    );
+                  })
+                }
+              >
+                <span>Extract Tasks from Pages ({selectedRowCount})</span>
+                <CommandShortcut>⌘S</CommandShortcut>
+              </CommandItem>
+              <CommandItem
+                onSelect={() =>
                   runCommand(() => {
                     // Clear all selections
                     setRowSelection({});
@@ -247,6 +432,36 @@ export const CommandMenu = () => {
             <CommandShortcut>⌘D</CommandShortcut>
           </CommandItem>
         </CommandGroup>
+
+        <CommandSeparator />
+
+        {!recording && (
+          <>
+            <CommandGroup heading="Voice">
+              <CommandItem
+                onSelect={() =>
+                  runCommand(() => {
+                    if (recording) {
+                      stopRecording();
+                    } else if (!transcribing) {
+                      startRecording();
+                    }
+                  })
+                }
+                disabled={transcribing}
+              >
+                <span>
+                  {recording
+                    ? "Stop Recording Voice Note"
+                    : transcribing
+                      ? "Processing..."
+                      : "Record Voice Note"}
+                </span>
+                <CommandShortcut>⌘R</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+          </>
+        )}
       </CommandList>
     </CommandDialog>
   );
