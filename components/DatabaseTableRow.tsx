@@ -44,7 +44,7 @@ const DatabaseTableRow = memo(
       if (isDragging && isInDragRange) {
         // Highlighted state (gray background)
         baseClasses +=
-          " bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700";
+          " bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700";
       } else if (isSelected) {
         // Selected state (blue background)
         baseClasses +=

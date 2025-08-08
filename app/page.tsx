@@ -2,7 +2,7 @@
 
 import DatabaseCombobox from "@/components/DatabaseCombobox";
 import DatabaseTable from "@/components/DatabaseTable";
-import { CommandMenu } from "@/components/CommandMenu";
+import { CommandMenu } from "@/components/CommandMenu/CommandMenu";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
 import type { NotionDatabasesResponse } from "@/types/notion";
 import { useEffect } from "react";

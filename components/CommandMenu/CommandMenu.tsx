@@ -395,7 +395,7 @@ export const CommandMenu = () => {
                 }
               >
                 <span>Extract Tasks from Pages ({selectedRowCount})</span>
-                <CommandShortcut>⌘S</CommandShortcut>
+                <CommandShortcut>⌘E</CommandShortcut>
               </CommandItem>
               <CommandItem
                 onSelect={() =>
@@ -413,27 +413,6 @@ export const CommandMenu = () => {
             <CommandSeparator />
           </>
         )}
-
-        <CommandGroup heading="Navigation">
-          <CommandItem
-            onSelect={() =>
-              runCommand(() => {
-                // Focus on database selector
-                const combobox = document.querySelector(
-                  '[role="combobox"]',
-                ) as HTMLElement;
-                if (combobox) {
-                  combobox.click();
-                }
-              })
-            }
-          >
-            <span>Select Database</span>
-            <CommandShortcut>⌘D</CommandShortcut>
-          </CommandItem>
-        </CommandGroup>
-
-        <CommandSeparator />
 
         {!recording && (
           <>
@@ -462,6 +441,27 @@ export const CommandMenu = () => {
             </CommandGroup>
           </>
         )}
+
+        <CommandSeparator />
+
+        <CommandGroup heading="Navigation">
+          <CommandItem
+            onSelect={() =>
+              runCommand(() => {
+                // Focus on database selector
+                const combobox = document.querySelector(
+                  '[role="combobox"]',
+                ) as HTMLElement;
+                if (combobox) {
+                  combobox.click();
+                }
+              })
+            }
+          >
+            <span>Select Database</span>
+            <CommandShortcut>⌘D</CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
       </CommandList>
     </CommandDialog>
   );
