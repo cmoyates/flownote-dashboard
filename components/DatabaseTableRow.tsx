@@ -13,57 +13,66 @@ interface DatabaseTableRowProps {
   onMouseEnter?: (rowIndex: number) => void;
 }
 
-const DatabaseTableRow = memo(({
-  row,
-  rowIndex,
-  isSelected,
-  isDragging = false,
-  isInDragRange = false,
-  onMouseDown,
-  onMouseEnter,
-}: DatabaseTableRowProps) => {
-  const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    onMouseDown?.(rowIndex, event);
-  }, [onMouseDown, rowIndex]);
+const DatabaseTableRow = memo(
+  ({
+    row,
+    rowIndex,
+    isSelected,
+    isDragging = false,
+    isInDragRange = false,
+    onMouseDown,
+    onMouseEnter,
+  }: DatabaseTableRowProps) => {
+    const handleMouseDown = useCallback(
+      (event: React.MouseEvent) => {
+        onMouseDown?.(rowIndex, event);
+      },
+      [onMouseDown, rowIndex],
+    );
 
-  const handleMouseEnter = useCallback(() => {
-    onMouseEnter?.(rowIndex);
-  }, [onMouseEnter, rowIndex]);
+    const handleMouseEnter = useCallback(() => {
+      onMouseEnter?.(rowIndex);
+    }, [onMouseEnter, rowIndex]);
 
-  const visibleCells = useMemo(() => row.getVisibleCells(), [row]);
+    const visibleCells = useMemo(() => row.getVisibleCells(), [row]);
 
-  // Memoized className generation
-  const rowClassName = useMemo(() => {
-    let className = "cursor-pointer";
+    // Memoized className generation
+    const rowClassName = useMemo(() => {
+      let baseClasses = "cursor-pointer";
 
-    if (isSelected) {
-      className += " bg-blue-500/20 hover:bg-blue-500/30";
-    } else {
-      className += " hover:bg-muted/30";
-    }
+      // Priority: highlighted > selected > deselected
+      if (isDragging && isInDragRange) {
+        // Highlighted state (gray background)
+        baseClasses +=
+          " bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700";
+      } else if (isSelected) {
+        // Selected state (blue background)
+        baseClasses +=
+          " bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50";
+      } else {
+        // Deselected state (no background, low-opacity black overlay on hover)
+        baseClasses += " bg-transparent hover:bg-black/5 dark:hover:bg-white/5";
+      }
 
-    if (isDragging && isInDragRange) {
-      className += " bg-primary/20 border-primary/50";
-    }
+      return baseClasses;
+    }, [isSelected, isDragging, isInDragRange]);
 
-    return className;
-  }, [isSelected, isDragging, isInDragRange]);
+    return (
+      <TableRow
+        className={rowClassName}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={handleMouseEnter}
+      >
+        {visibleCells.map((cell) => (
+          <TableCell key={cell.id} className="relative">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+  },
+);
 
-  return (
-    <TableRow
-      className={rowClassName}
-      onMouseDown={handleMouseDown}
-      onMouseEnter={handleMouseEnter}
-    >
-      {visibleCells.map((cell) => (
-        <TableCell key={cell.id} className="relative">
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
-});
-
-DatabaseTableRow.displayName = 'DatabaseTableRow';
+DatabaseTableRow.displayName = "DatabaseTableRow";
 
 export default DatabaseTableRow;
