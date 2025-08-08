@@ -44,11 +44,11 @@ const DatabaseTableRow = memo(
       if (isDragging && isInDragRange) {
         // Highlighted state (gray background)
         baseClasses +=
-          " bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700";
+          " bg-neutral-200 dark:bg-neutral-900 hover:bg-neutral-300 dark:hover:bg-neutral-800";
       } else if (isSelected) {
         // Selected state (blue background)
         baseClasses +=
-          " bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50";
+          " bg-blue-100 dark:bg-blue-500/30 hover:bg-blue-200 dark:hover:bg-blue-500/40";
       } else {
         // Deselected state (no background, low-opacity black overlay on hover)
         baseClasses += " bg-transparent hover:bg-black/5 dark:hover:bg-white/5";
