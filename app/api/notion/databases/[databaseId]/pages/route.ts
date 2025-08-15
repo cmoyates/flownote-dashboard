@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import type {
   PageObjectResponse,
   QueryDatabaseParameters,
+  BlockObjectRequest,
+  CreatePageResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { marked } from "marked";
+import type { Tokens } from "marked";
 
 // Initialize Notion client
 const notion = new Client({
@@ -24,7 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           error: "Notion API key not configured",
           message: "Please add NOTION_API_KEY to your environment variables",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -37,7 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           error: "Database ID is required",
           message: "Please provide a valid database ID in the URL path",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { searchParams } = request.nextUrl;
     const pageSize = Math.min(
       parseInt(searchParams.get("page_size") || "50"),
-      50
+      50,
     );
     const startCursor = searchParams.get("start_cursor") || undefined;
 
@@ -61,7 +65,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             error: "Invalid filter format",
             message: "Filter must be a valid JSON object",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -78,7 +82,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             error: "Invalid sorts format",
             message: "Sorts must be a valid JSON array",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -128,7 +132,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         total_count: pages.length,
         database_id: databaseId,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error fetching pages from database:", error);
@@ -148,7 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               error: "Database not found",
               message: `Database with ID ${params.databaseId} was not found or is not accessible`,
             },
-            { status: 404 }
+            { status: 404 },
           );
         case "unauthorized":
           return NextResponse.json(
@@ -156,7 +160,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               error: "Unauthorized",
               message: "The integration does not have access to this database",
             },
-            { status: 401 }
+            { status: 401 },
           );
         case "rate_limited":
           return NextResponse.json(
@@ -164,7 +168,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               error: "Rate limited",
               message: "Too many requests. Please try again later",
             },
-            { status: 429 }
+            { status: 429 },
           );
         default:
           return NextResponse.json(
@@ -172,7 +176,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               error: "Notion API error",
               message: notionError.message || "An unexpected error occurred",
             },
-            { status: notionError.status || 500 }
+            { status: notionError.status || 500 },
           );
       }
     }
@@ -183,7 +187,280 @@ export async function GET(request: NextRequest, context: RouteContext) {
         error: "Internal server error",
         message: "An unexpected error occurred while fetching pages",
       },
-      { status: 500 }
+      { status: 500 },
+    );
+  }
+}
+
+// Ensure Node.js runtime for Notion SDK
+export const runtime = "nodejs";
+
+// Convert a Markdown string to Notion BlockObjectRequests (simplified)
+const markdownToNotionBlocks = (markdown: string): BlockObjectRequest[] => {
+  const tokens = marked.lexer(markdown as string);
+  const blocks: BlockObjectRequest[] = [];
+
+  for (const token of tokens) {
+    switch (token.type) {
+      case "heading": {
+        // Only support heading_1, heading_2, heading_3 as per Notion API
+        const headingType =
+          token.depth === 1
+            ? "heading_1"
+            : token.depth === 2
+              ? "heading_2"
+              : "heading_3";
+
+        if (headingType === "heading_1") {
+          blocks.push({
+            object: "block",
+            type: "heading_1",
+            heading_1: {
+              rich_text: [
+                { type: "text", text: { content: String(token.text || "") } },
+              ],
+            },
+          } as BlockObjectRequest);
+        } else if (headingType === "heading_2") {
+          blocks.push({
+            object: "block",
+            type: "heading_2",
+            heading_2: {
+              rich_text: [
+                { type: "text", text: { content: String(token.text || "") } },
+              ],
+            },
+          } as BlockObjectRequest);
+        } else {
+          blocks.push({
+            object: "block",
+            type: "heading_3",
+            heading_3: {
+              rich_text: [
+                { type: "text", text: { content: String(token.text || "") } },
+              ],
+            },
+          } as BlockObjectRequest);
+        }
+        break;
+      }
+
+      case "paragraph": {
+        blocks.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [
+              { type: "text", text: { content: String(token.text || "") } },
+            ],
+          },
+        } as BlockObjectRequest);
+        break;
+      }
+
+      case "code": {
+        const codeToken = token as Tokens.Code;
+        blocks.push({
+          object: "block",
+          type: "code",
+          code: {
+            rich_text: [
+              { type: "text", text: { content: String(codeToken.text || "") } },
+            ],
+            language:
+              typeof codeToken.lang === "string" && codeToken.lang.length > 0
+                ? codeToken.lang
+                : ("plain text" as string),
+          },
+        } as BlockObjectRequest);
+        break;
+      }
+
+      case "list": {
+        // Simplified list handling: map to bulleted list items
+        for (const item of token.items || []) {
+          blocks.push({
+            object: "block",
+            type: "bulleted_list_item",
+            bulleted_list_item: {
+              rich_text: [
+                { type: "text", text: { content: String(item.text || "") } },
+              ],
+            },
+          } as BlockObjectRequest);
+        }
+        break;
+      }
+
+      case "space":
+        // Ignore spacing tokens
+        break;
+
+      default:
+        // Unsupported token types are skipped to keep implementation simple
+        break;
+    }
+  }
+
+  return blocks;
+};
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  const params = await context.params;
+  try {
+    // Check API key
+    if (!process.env.NOTION_API_KEY) {
+      return NextResponse.json(
+        {
+          error: "Notion API key not configured",
+          message: "Please add NOTION_API_KEY to your environment variables",
+        },
+        { status: 500 },
+      );
+    }
+
+    const { databaseId } = params;
+
+    if (!databaseId) {
+      return NextResponse.json(
+        { error: "Database ID is required in the URL path" },
+        { status: 400 },
+      );
+    }
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { markdown, title: explicitTitle } = body as {
+      markdown?: string;
+      title?: string;
+    };
+
+    if (
+      !markdown ||
+      typeof markdown !== "string" ||
+      markdown.trim().length === 0
+    ) {
+      return NextResponse.json(
+        { error: "'markdown' must be a non-empty string" },
+        { status: 400 },
+      );
+    }
+
+    // Build blocks from markdown
+    const blocks = markdownToNotionBlocks(markdown);
+
+    if (!blocks.length) {
+      return NextResponse.json(
+        { error: "No content could be derived from markdown" },
+        { status: 400 },
+      );
+    }
+
+    // Determine title
+    let derivedTitle =
+      explicitTitle &&
+      typeof explicitTitle === "string" &&
+      explicitTitle.trim().length > 0
+        ? explicitTitle.trim()
+        : "New Note";
+
+    // If first block is H1, use it as title and remove it from children
+    const firstBlock = blocks[0];
+    if (
+      firstBlock &&
+      firstBlock.type === "heading_1" &&
+      firstBlock.heading_1?.rich_text &&
+      firstBlock.heading_1.rich_text[0]?.type === "text"
+    ) {
+      const rich = firstBlock.heading_1.rich_text[0];
+      derivedTitle = rich.text.content || derivedTitle;
+      blocks.shift();
+    }
+
+    // Retrieve database to find actual title property name
+    const database = await notion.databases.retrieve({
+      database_id: databaseId,
+    });
+    let titlePropertyName = "Name";
+    for (const [propName, prop] of Object.entries(database.properties) as Array<
+      [string, { type: string }]
+    >) {
+      if (prop.type === "title") {
+        titlePropertyName = propName;
+        break;
+      }
+    }
+
+    const created: CreatePageResponse = await notion.pages.create({
+      parent: { database_id: databaseId },
+      properties: {
+        [titlePropertyName]: {
+          title: [
+            {
+              type: "text",
+              text: { content: derivedTitle },
+            },
+          ],
+        },
+      },
+      children: blocks,
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        page: {
+          id: created.id,
+          url:
+            "url" in created ? (created as PageObjectResponse).url : undefined,
+        },
+        title: derivedTitle,
+      },
+      { status: 201 },
+    );
+  } catch (error: unknown) {
+    console.error("Error creating page in Notion:", error);
+
+    // Basic Notion error handling
+    if (error && typeof error === "object" && "code" in error) {
+      const notionError = error as {
+        code: string;
+        message?: string;
+        status?: number;
+      };
+      switch (notionError.code) {
+        case "object_not_found":
+          return NextResponse.json(
+            { error: "Database not found or inaccessible" },
+            { status: 404 },
+          );
+        case "validation_error":
+          return NextResponse.json(
+            {
+              error: "Validation error creating page",
+              details: notionError.message,
+            },
+            { status: 400 },
+          );
+        case "unauthorized":
+          return NextResponse.json(
+            { error: "Unauthorized to access Notion API" },
+            { status: 401 },
+          );
+        default:
+          return NextResponse.json(
+            { error: "Notion API error", details: notionError.message },
+            { status: notionError.status || 500 },
+          );
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
