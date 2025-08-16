@@ -9,7 +9,7 @@ import {
  * @returns Promise containing the markdown conversion results
  */
 export const convertPagesToMarkdown = async (
-  pageIds: string[]
+  pageIds: string[],
 ): Promise<NotionPageToMarkdownResponse> => {
   if (!pageIds || pageIds.length === 0) {
     throw new Error("Page IDs array cannot be empty");
@@ -31,7 +31,7 @@ export const convertPagesToMarkdown = async (
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        errorData.error || `HTTP ${response.status}: ${response.statusText}`,
       );
     }
 
@@ -49,7 +49,7 @@ export const convertPagesToMarkdown = async (
  * @returns Promise containing the markdown content for the page
  */
 export const convertPageToMarkdown = async (
-  pageId: string
+  pageId: string,
 ): Promise<string> => {
   if (!pageId || pageId.trim().length === 0) {
     throw new Error("Page ID cannot be empty");

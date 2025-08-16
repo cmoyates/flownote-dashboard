@@ -12,7 +12,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { useDatabaseTableStore } from "@/stores/databaseTableStore";
-import { convertPagesToMarkdown } from "@/lib/notion-markdown";
+import { convertPagesToMarkdown } from "@/lib/notionMarkdown";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
