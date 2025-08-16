@@ -1,6 +1,6 @@
 import { MouseEvent, memo } from "react";
 import { type Table } from "@tanstack/react-table";
-import { NotionPage } from "@/types/notion";
+import { NotionPage } from "@/features/notion/types/page";
 import DatabaseTableRow from "./DatabaseTableRow";
 
 interface DatabaseTableBodyRowsProps {

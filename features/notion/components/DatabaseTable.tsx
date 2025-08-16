@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useDatabaseTableStore } from "@/stores/databaseTableStore";
-import { NotionPage, NotionPagesResponse } from "@/types/notion";
+import { useDatabaseTableStore } from "@/features/notion/stores/databaseTableStore";
+import { NotionPage, NotionPagesResponse } from "@/features/notion/types/page";
 import DatabaseTableBodyRows from "./DatabaseTableBodyRows";
 
 // Memoized cell components

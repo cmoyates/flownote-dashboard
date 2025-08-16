@@ -1,4 +1,4 @@
-import { NotionDatabase, NotionPage } from "@/types/notion";
+import { NotionDatabase, NotionPage } from "@/features/notion/types/page";
 import { RowSelectionState, Updater } from "@tanstack/react-table";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";

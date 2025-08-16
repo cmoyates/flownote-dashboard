@@ -11,12 +11,12 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { useDatabaseTableStore } from "@/stores/databaseTableStore";
-import { convertPagesToMarkdown } from "@/lib/notionMarkdown";
+import { useDatabaseTableStore } from "@/features/notion/stores/databaseTableStore";
+import { convertPagesToMarkdown } from "@/features/notion/utils/notionMarkdown";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import type { NotionPage } from "@/types/notion";
+import type { NotionPage } from "@/features/notion/types/page";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);

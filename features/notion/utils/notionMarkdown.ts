@@ -1,7 +1,7 @@
 import {
   NotionPageToMarkdownRequest,
   NotionPageToMarkdownResponse,
-} from "@/types/notion";
+} from "@/features/notion/types/page";
 
 /**
  * Convert Notion pages to markdown format

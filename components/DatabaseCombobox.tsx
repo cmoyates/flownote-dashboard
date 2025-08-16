@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useDatabaseTableStore } from "@/stores/databaseTableStore";
+import { useDatabaseTableStore } from "@/features/notion/stores/databaseTableStore";
 import { useState, useCallback, useMemo } from "react";
 
 const DatabaseCombobox = () => {

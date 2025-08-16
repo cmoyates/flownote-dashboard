@@ -1,6 +1,9 @@
 import { Client } from "@notionhq/client";
 import { NextRequest, NextResponse } from "next/server";
-import type { NotionDatabase, NotionDatabaseProperty } from "@/types/notion";
+import type {
+  NotionDatabase,
+  NotionDatabaseProperty,
+} from "@/features/notion/types/page";
 
 // Initialize Notion client
 const notion = new Client({
@@ -16,7 +19,7 @@ export async function GET(request: NextRequest) {
           error: "Notion API key not configured",
           message: "Please add NOTION_API_KEY to your environment variables",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -24,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const pageSize = Math.min(
       parseInt(searchParams.get("page_size") || "100"),
-      100
+      100,
     );
     const startCursor = searchParams.get("start_cursor") || undefined;
 
@@ -51,7 +54,8 @@ export async function GET(request: NextRequest) {
 
         // Extract property information
         const properties: NotionDatabaseProperty[] = Object.entries(
-          (database.properties as Record<string, Record<string, unknown>>) || {}
+          (database.properties as Record<string, Record<string, unknown>>) ||
+            {},
         ).map(([name, property]: [string, Record<string, unknown>]) => ({
           name,
           type: property.type as string,
@@ -77,7 +81,7 @@ export async function GET(request: NextRequest) {
           is_inline: database.is_inline as boolean,
           public_url: database.public_url as string | null,
         };
-      }
+      },
     );
 
     return NextResponse.json({
@@ -100,7 +104,7 @@ export async function GET(request: NextRequest) {
             "Please check your Notion API key and integration permissions",
           details: errorObj.message,
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -111,7 +115,7 @@ export async function GET(request: NextRequest) {
           message: "Too many requests to Notion API. Please try again later.",
           details: errorObj.message,
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -122,7 +126,7 @@ export async function GET(request: NextRequest) {
         details: errorObj.message || "Unknown error",
         code: errorObj.code || "unknown_error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
