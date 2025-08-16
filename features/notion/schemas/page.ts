@@ -21,3 +21,32 @@ export const NotionPageSchema = z.strictObject({
 });
 
 export type NotionPage = z.infer<typeof NotionPageSchema>;
+
+export const ListPagesQuery = z.object({
+  page_size: z.coerce.number().int().min(1).max(50).default(50),
+  start_cursor: z.string().optional(),
+  filter: z
+    .string()
+    .transform((s) => JSON.parse(s))
+    .optional()
+    .catch(undefined),
+  sorts: z
+    .string()
+    .transform((s) => JSON.parse(s))
+    .optional()
+    .catch(undefined),
+});
+
+export const ListPagesResponseSchema = z.object({
+  pages: z.array(NotionPageSchema),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+  total_count: z.number(),
+  database_id: z.string(),
+});
+export type ListPagesResponse = z.infer<typeof ListPagesResponseSchema>;
+
+export const CreatePageBodySchema = z.object({
+  markdown: z.string().min(1),
+  title: z.string().optional(),
+});

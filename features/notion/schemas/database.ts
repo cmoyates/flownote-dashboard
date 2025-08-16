@@ -37,3 +37,15 @@ export type NotionDatabaseProperty = z.infer<
 >;
 
 export type NotionDatabase = z.infer<typeof NotionDatabaseSchema>;
+
+export const ListDatabasesQuerySchema = z.object({
+  page_size: z.coerce.number().int().min(1).max(100).default(100),
+  start_cursor: z.string().optional(),
+});
+
+export const ListDatabasesResponseSchema = z.object({
+  databases: z.array(NotionDatabaseSchema),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+  total_count: z.number(),
+});
