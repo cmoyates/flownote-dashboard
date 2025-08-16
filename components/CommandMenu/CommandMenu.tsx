@@ -16,7 +16,7 @@ import { convertPagesToMarkdown } from "@/features/notion/utils/notionMarkdown";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import type { NotionPage } from "@/features/notion/types/page";
+import type { NotionPage } from "@/features/notion/schemas";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type {
   NotionDatabase,
   NotionDatabaseProperty,
-} from "@/features/notion/types/page";
+} from "@/features/notion/schemas";
 
 // Initialize Notion client
 const notion = new Client({

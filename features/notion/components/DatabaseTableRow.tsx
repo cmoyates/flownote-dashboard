@@ -1,7 +1,7 @@
 import { MouseEvent, memo, useCallback, useMemo } from "react";
 import { flexRender, type Row } from "@tanstack/react-table";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { NotionPage } from "@/features/notion/types/page";
+import { NotionPage } from "@/features/notion/schemas";
 
 interface DatabaseTableRowProps {
   row: Row<NotionPage>;

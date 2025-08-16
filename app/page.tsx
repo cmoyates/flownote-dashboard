@@ -4,7 +4,7 @@ import DatabaseCombobox from "@/components/DatabaseCombobox";
 import DatabaseTable from "@/features/notion/components/DatabaseTable";
 import { CommandMenu } from "@/components/CommandMenu/CommandMenu";
 import { useDatabaseTableStore } from "@/features/notion/stores/databaseTableStore";
-import type { NotionDatabasesResponse } from "@/features/notion/types/page";
+import type { NotionDatabasesResponse } from "@/features/notion/schemas";
 import { useEffect } from "react";
 
 // Extracted data fetching component following "move state down" principle
