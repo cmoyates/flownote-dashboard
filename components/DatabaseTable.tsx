@@ -31,7 +31,7 @@ const TitleCell = memo(({ value }: { value: string | null }) => (
 TitleCell.displayName = "TitleCell";
 
 const DateCell = memo(({ value }: { value: string }) => (
-  <div className="text-sm text-muted-foreground">
+  <div className="text-muted-foreground text-sm">
     {new Date(value).toLocaleDateString()}
   </div>
 ));
@@ -42,7 +42,7 @@ const ActionCell = memo(({ url }: { url: string }) => (
     href={url}
     target="_blank"
     rel="noopener noreferrer"
-    className="text-blue-600 hover:text-blue-800 text-sm underline"
+    className="text-sm text-blue-600 underline hover:text-blue-800"
   >
     Open in Notion
   </a>
@@ -93,6 +93,12 @@ const DatabaseTable = () => {
 
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // Force a re-render when pages changes to surface optimistic inserts immediately
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    forceRender((n) => n + 1);
+  }, [pages]);
+
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
@@ -112,7 +118,7 @@ const DatabaseTable = () => {
 
       try {
         const response = await fetch(
-          `/api/notion/databases/${activeDatabaseID}/pages`
+          `/api/notion/databases/${activeDatabaseID}/pages`,
         );
 
         if (!response.ok) {
@@ -183,7 +189,7 @@ const DatabaseTable = () => {
         enableSorting: false,
       },
     ],
-    []
+    [],
   );
 
   // Memoized table options for stable reference
@@ -208,7 +214,7 @@ const DatabaseTable = () => {
         },
       },
     }),
-    [pages, columns, sorting, rowSelection, setRowSelection]
+    [pages, columns, sorting, rowSelection, setRowSelection],
   );
 
   // Create table instance
@@ -256,7 +262,7 @@ const DatabaseTable = () => {
       event.preventDefault();
       document.body.style.userSelect = "none";
     },
-    [table, rowSelection]
+    [table, rowSelection],
   );
 
   const handleMouseEnter = useCallback(
@@ -265,7 +271,7 @@ const DatabaseTable = () => {
 
       setDragEndIndex(rowIndex);
     },
-    [dragStartIndex]
+    [dragStartIndex],
   );
 
   // Memoized drag range calculations
@@ -365,20 +371,20 @@ const DatabaseTable = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full space-y-4">
+    <div className="flex h-full w-full flex-col space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">{selectionText}</div>
+        <div className="text-muted-foreground text-sm">{selectionText}</div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="min-h-0 flex-1">
         <ScrollArea className="h-full w-full rounded-md border">
           <div
             className={
-              isDragging ? "select-none cursor-grabbing" : "cursor-auto"
+              isDragging ? "cursor-grabbing select-none" : "cursor-auto"
             }
           >
             <Table>
-              <TableHeader className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+              <TableHeader className="bg-background/95 supports-[backdrop-filter]:bg-background/60 z-10 backdrop-blur">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
@@ -386,14 +392,14 @@ const DatabaseTable = () => {
                         <div
                           className={
                             header.column.getCanSort()
-                              ? "cursor-pointer select-none hover:bg-muted/50 rounded p-1 -m-1"
+                              ? "hover:bg-muted/50 -m-1 cursor-pointer rounded p-1 select-none"
                               : ""
                           }
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           {header.column.getCanSort() && (
                             <span className="ml-1">
@@ -417,6 +423,7 @@ const DatabaseTable = () => {
                   rowSelection={rowSelection}
                   onMouseDown={handleMouseDown}
                   onMouseEnter={handleMouseEnter}
+                  dataRef={pages}
                 />
               </TableBody>
             </Table>
@@ -429,7 +436,7 @@ const DatabaseTable = () => {
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
           <select
-            className="h-8 w-[70px] rounded border border-input bg-transparent px-2 text-sm"
+            className="border-input h-8 w-[70px] rounded border bg-transparent px-2 text-sm"
             value={table.getState().pagination.pageSize}
             onChange={(e) => {
               table.setPageSize(Number(e.target.value));

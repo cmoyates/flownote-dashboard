@@ -16,6 +16,7 @@ import { convertPagesToMarkdown } from "@/lib/notion-markdown";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
+import type { NotionPage } from "@/types/notion";
 
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
@@ -24,9 +25,20 @@ export const CommandMenu = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const recordingToastIdRef = useRef<string | number | null>(null);
+  const activeDatabaseIDRef = useRef<string>("");
 
-  const { pages, setRowSelection, rowSelection, selectedRowCount } =
-    useDatabaseTableStore();
+  const {
+    pages,
+    setRowSelection,
+    rowSelection,
+    selectedRowCount,
+    activeDatabaseID,
+  } = useDatabaseTableStore();
+
+  // Keep the latest DB ID in a ref to avoid stale closures in callbacks
+  useEffect(() => {
+    activeDatabaseIDRef.current = activeDatabaseID;
+  }, [activeDatabaseID]);
 
   const { sendMessage } = useChat({
     onFinish: (message) => {
@@ -41,11 +53,83 @@ export const CommandMenu = () => {
     transport: new DefaultChatTransport({
       api: "/api/voice-note",
     }),
-    onFinish: (message) => {
+    onFinish: async (message) => {
       const lastPart = message.message.parts[message.message.parts.length - 1];
       if (lastPart.type === "text") {
-        console.log("Voice note response:", lastPart.text);
-        toast.success("Voice note processed successfully!");
+        // Ensure we have an active Notion database selected
+        const dbId = activeDatabaseIDRef.current;
+
+        if (!dbId) {
+          toast.error("Select a Notion database first.");
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/notion/databases/${dbId}/pages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ markdown: lastPart.text }),
+          });
+
+          // if (!res.ok) {
+          //   const err = await res.json().catch(() => ({}));
+          //   // Rollback optimistic row on failure
+          //   useDatabaseTableStore.setState((s) => ({
+          //     pages: s.pages.filter((p) => p.id !== tempId),
+          //   }));
+          //   throw new Error(err?.error || `Failed with status ${res.status}`);
+          // }
+
+          const data: { page?: { id: string; url?: string }; title?: string } =
+            await res.json();
+
+          // Replace optimistic with real page details
+
+          const now = new Date();
+          const isoNow = now.toISOString();
+
+          const optimisticPage: NotionPage = {
+            id: data.page?.id,
+            url: data.page?.url,
+            title: data.title,
+            created_time: isoNow,
+            last_edited_time: isoNow,
+            created_by: {},
+            last_edited_by: {},
+            cover: null,
+            icon: null,
+            parent: { database_id: dbId } as unknown as NotionPage["parent"],
+            archived: false,
+            in_trash: false,
+            properties: {},
+          } as unknown as NotionPage;
+
+          useDatabaseTableStore.setState((s) => ({
+            pages: [optimisticPage, ...s.pages],
+          }));
+
+          // Optional: background refresh to ensure full sync with Notion (e.g., computed properties)
+          try {
+            const refreshed = await fetch(
+              `/api/notion/databases/${dbId}/pages`,
+            );
+            if (refreshed.ok) {
+              const freshData = await refreshed.json();
+              useDatabaseTableStore.setState({ pages: freshData.pages });
+            }
+          } catch {}
+          toast.success("Voice note saved to Notion.", {
+            action: data.page?.url
+              ? {
+                  label: "Open",
+                  onClick: () => window.open(data.page!.url!, "_blank"),
+                }
+              : undefined,
+          });
+        } catch (err) {
+          console.error("Failed to save voice note to Notion:", err);
+          toast.error("Failed to save voice note to Notion.");
+        }
       }
     },
     onError: (error) => {
