@@ -18,6 +18,39 @@ import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
 import type { NotionPage } from "@/types/notion";
 
+// Inline component to render a live-updating mm:ss timer in the toast description
+const RecordingDescription = ({ startAt }: { startAt: number }) => {
+  const [, forceTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      // trigger re-render every second
+      forceTick((n) => n + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const totalSeconds = Math.max(0, Math.floor((Date.now() - startAt) / 1000));
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="min-w-0 break-words">
+        Click &#39;Stop Recording&#39; to finish or press ⌘R
+      </span>
+      <span
+        aria-live="polite"
+        className="bg-muted shrink-0 rounded px-1.5 py-0.5 text-xs tabular-nums"
+      >
+        {minutes}:{seconds}
+      </span>
+    </div>
+  );
+};
+
 export const CommandMenu = () => {
   const [open, setOpen] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -223,9 +256,10 @@ export const CommandMenu = () => {
       mediaRecorder.start();
       setRecording(true);
 
-      // Show persistent toast with stop recording button
+      // Show persistent toast with stop recording button and live timer
+      const startedAt = Date.now();
       recordingToastIdRef.current = toast("Recording voice note...", {
-        description: "Click 'Stop Recording' to finish or press ⌘R",
+        description: <RecordingDescription startAt={startedAt} />,
         action: {
           label: "Stop Recording",
           onClick: handleStopRecordingFromToast,
